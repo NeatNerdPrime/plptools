@@ -4,9 +4,10 @@ Makefile.in
 Makefile
 .deps
 .libs
-/intl
 /aclocal.m4
 /autom4te.cache
+/build-aux
+/libgnu
 /configure
 /config.guess
 /config.sub
@@ -23,7 +24,6 @@ Makefile
 /plptools-*.tar.gz
 /ABOUT-NLS
 /ChangeLog
-/release-notes-*
 /compile
 /depcomp
 /missing

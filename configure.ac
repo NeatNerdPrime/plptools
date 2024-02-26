@@ -20,20 +20,23 @@
 
 AC_PREREQ([2.71])
 
-AC_INIT([plptools],[1.0.18],[plptools-developers@lists.sourceforge.net])
+AC_INIT([plptools],[1.0.19],[plptools-developers@lists.sourceforge.net])
 AC_CANONICAL_TARGET
+AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE
-
-dnl Basic settings
-AC_USE_SYSTEM_EXTENSIONS
-AC_CONFIG_HEADERS([config.h])
-LT_INIT
-AC_CONFIG_MACRO_DIR([m4])
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 dnl checks for programs
 AC_PROG_INSTALL
 AC_PROG_CXX
 AC_PROG_CC
+gl_EARLY
+gl_INIT
+
+dnl Basic settings
+AC_USE_SYSTEM_EXTENSIONS
+AC_CONFIG_HEADERS([config.h])
+LT_INIT
 
 dnl Debugging
 AC_MSG_CHECKING([if the debugging code should be included])
@@ -54,37 +57,55 @@ fi
 AC_MSG_RESULT(no)
 ])
 
-dnl Turn on additional compiler warnings
-if test "$GCC" = "yes"; then
-  CFLAGS="$CFLAGS -Wall -W -Wmissing-prototypes -Wstrict-prototypes -pedantic"
+dnl Extra warnings with GCC
+AC_ARG_ENABLE([gcc-warnings],
+  [AS_HELP_STRING([--enable-gcc-warnings],
+                  [turn on lots of GCC warnings (for developers)])],
+  [case $enableval in
+     yes|no) ;;
+     *)      AC_MSG_ERROR([bad value $enableval for gcc-warnings option]) ;;
+   esac
+   gl_gcc_warnings=$enableval],
+  [gl_gcc_warnings=no]
+)
+if test "$gl_gcc_warnings" = yes; then
+  dnl Set up the list of undesired warnings.
+  nw=
+  nw="$nw -Wsystem-headers"   # Don’t let system headers trigger warnings
+
+  gl_MANYWARN_ALL_GCC([warnings])
+
+  dnl Enable all GCC warnings not in this list.
+  gl_MANYWARN_COMPLEMENT([warnings], [$warnings], [$nw])
+  for w in $warnings; do
+    gl_WARN_ADD([$w])
+  done
+
+  dnl Add an extra warning
+  gl_WARN_ADD([-Wconversion])
+
+  # When compiling with GCC, prefer -isystem to -I when including system
+  # include files, to avoid generating useless diagnostics for the files.
+  ISYSTEM='-isystem '
+else
+  ISYSTEM='-I'
 fi
+AC_SUBST([ISYSTEM])
 
 dnl NLS support
 ALL_LINGUAS="de sv"
 AM_GNU_GETTEXT([external])
 AM_GNU_GETTEXT_VERSION([0.19.6])
 
-dnl Large File Support
-AC_SYS_LARGEFILE
-AC_FUNC_FSEEKO
-
-dnl checks for libraries
-
 dnl readline and history for plpftp
 MIN_LIBREADLINE_VERSION=4.3
 AX_LIB_READLINE([$MIN_LIBREADLINE_VERSION])
 
-# FUSE for plpfuse
+# FUSE and libattr for plpfuse
 PKG_CHECK_MODULES([FUSE], [fuse >= 2.6], [enable_fuse=yes], [enable_fuse=no])
-
-# Check for libattr headers for plpfuse
 AC_CHECK_HEADER(attr/attributes.h)
 AC_CHECK_HEADERS(attr/xattr.h)
 AM_CONDITIONAL(BUILD_PLPFUSE, test x$enable_fuse = xyes)
-
-dnl these two are for Solaris
-AC_SEARCH_LIBS([socket], [socket])
-AC_SEARCH_LIBS([gethostbyname], [nsl])
 
 dnl special options for customization
 
@@ -173,11 +194,12 @@ AH_BOTTOM([
 #define FUSE_USE_VERSION 26
 ])
 
-
+dnl Create files
 AC_CONFIG_FILES(
         Makefile
         po/Makefile.in
         lib/Makefile
+        libgnu/Makefile
         ncpd/Makefile
         plpftp/Makefile
         plpfuse/Makefile

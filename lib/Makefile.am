@@ -18,9 +18,9 @@
 # You should have received a copy of the GNU General Public License along
 # along with this program; if not, see <https://www.gnu.org/licenses/>.
 
-AM_CPPFLAGS = -I$(top_srcdir)/intl
 AM_CFLAGS = $(THREADED_CFLAGS)
 AM_CXXFLAGS = $(THREADED_CXXFLAGS)
+LDADD = $(HOSTENT_LIB) $(LIBSOCKET)
 
 pkglib_LTLIBRARIES = libplp.la
 
